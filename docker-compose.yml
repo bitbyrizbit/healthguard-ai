@@ -1,0 +1,26 @@
+services: 
+  postgres-db: 
+    image: postgres:16-alpine 
+    container_name: nextjs_postgres_db 
+    restart: always 
+    environment: 
+      POSTGRES_USER: devuser 
+      POSTGRES_PASSWORD: devpassword 
+      POSTGRES_DB: nextjs_blog_db 
+    ports:
+      - "5433:5432" 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+  
+  mongo-db:
+    image: mongo:latest
+    container_name: nextjs_mongo_db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes: 
+  postgres_data: 
+  mongo_data:
