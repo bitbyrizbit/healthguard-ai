@@ -1,0 +1,38 @@
+[
+  {
+    "id": "1",
+    "name": "Rahul Sharma",
+    "age": 54,
+    "gender": "Male",
+    "phone": "9876543210",
+    "email": "rahul.s@example.com",
+    "bloodPressure": "135/85",
+    "cholesterol": 220,
+    "heartRate": 72,
+    "address": "123 Main St, Mumbai"
+  },
+  {
+    "id": "2",
+    "name": "Aisha Khan",
+    "age": 61,
+    "gender": "Female",
+    "phone": "9876543211",
+    "email": "aisha.k@example.com",
+    "bloodPressure": "145/90",
+    "cholesterol": 245,
+    "heartRate": 78,
+    "address": "456 Park Ave, Delhi"
+  },
+  {
+    "id": "3",
+    "name": "Arjun Mehta",
+    "age": 42,
+    "gender": "Male",
+    "phone": "9876543212",
+    "email": "arjun.m@example.com",
+    "bloodPressure": "120/80",
+    "cholesterol": 185,
+    "heartRate": 65,
+    "address": "789 Lake Rd, Bangalore"
+  }
+]
