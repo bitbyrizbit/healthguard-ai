@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AuthButton from "./AuthButton";
 
 export default function Navbar() {
   return (
@@ -7,7 +8,7 @@ export default function Navbar() {
         HealthGuard
       </Link>
       <div className="text-slate-600 text-sm">
-        Profile / Settings
+        <AuthButton />
       </div>
     </header>
   );
