@@ -1,9 +1,9 @@
 import mongoose from 'mongoose'; 
 
-const MONGODB_URI = process.env.MONGODB_URI; 
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/healthguard_medical_supplies"; 
 
-if (!MONGODB_URI) { 
-  throw new Error('Please define the MONGODB_URI environment variable inside .env'); 
+if (!process.env.MONGODB_URI) { 
+  console.warn('MONGODB_URI environment variable is missing. Falling back to default during build.'); 
 } 
 
 interface MongooseCache { 
