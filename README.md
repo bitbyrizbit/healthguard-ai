@@ -1,198 +1,62 @@
 # HealthGuard — Patient & Medical Inventory Management System
 
-A production-grade, full-stack healthcare operations platform engineered with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and a **polyglot persistence layer** combining **PostgreSQL (Prisma 7 ORM)**, **MongoDB (Mongoose ODM)**, and local storage. The platform features role-based authentication, interactive transactional data operations, embedded inventory tracking, and multi-stage **Docker Compose** containerization for self-hosted deployment.
+A full-stack healthcare operations platform engineered with Next.js 16 (App Router), TypeScript, Tailwind CSS, and a polyglot persistence architecture integrating PostgreSQL (via Prisma 7 ORM) and MongoDB (via Mongoose 9 ODM). The platform implements dynamic routing, server actions, transactional relational data operations, embedded document schemas, session-based authentication with role-based access control, and containerized deployment via Docker Compose.
 
 ---
 
-## 🌟 Key Highlights
+## 1. Project Overview & Motivation
 
-- **Next.js 16 App Router & Server Actions**: Zero-client data fetching, streaming responses, dynamic and nested routing, Route Handlers, and cache revalidation (`revalidatePath`).
-- **PostgreSQL Layer (Prisma 7 + Driver Adapter)**: Internal hospital announcements powered by Prisma ORM using `@prisma/adapter-pg` with native pg connection pooling and atomic ACID transactions (`prisma.$transaction`).
-- **MongoDB Layer (Mongoose ODM)**: Medical supplies and consumable catalog featuring schema-level constraints, enumeration, embedded sub-documents (`IInventory`), and persistent global connection caching for serverless/hot-reload safety.
-- **Authentication & RBAC**: Better Auth integration backed by PostgreSQL and managed by Next.js `proxy` (middleware) route guards.
-- **Enterprise Containerization**: Multi-stage `Dockerfile` (deps → builder → runner) leveraging Next.js standalone output bundling to create an isolated production image running under an unprivileged `nextjs` Alpine user.
+HealthGuard is designed to serve as an integrated clinical operations system. Modern enterprise systems typically manage distinct data workloads that benefit from different database paradigms:
+
+- **Relational Data (PostgreSQL)**: Handles structured entities requiring strict referential integrity, foreign key relations, and ACID transactions (e.g., internal staff communications, user accounts, authentication sessions).
+- **Document-Oriented Data (MongoDB)**: Handles semi-structured, nested entities with flexible schemas (e.g., medical supplies, consumables catalog, warehouse inventory with sub-document specifications).
+- **Core Clinical Patient Records**: Demonstrates file-system App Router design, nested layouts, Server Actions for mutations, and Route Handlers for external REST integration.
 
 ---
 
-## 🏛️ System Architecture
+## 2. System Architecture & Data Flow
 
 ```
-                                  HEALTHGUARD PLATFORM
-                                           │
-         ┌─────────────────────────────────┼─────────────────────────────────┐
-         │                                 │                                 │
-   PATIENT RECORDS               INTERNAL ANNOUNCEMENTS            SUPPLY INVENTORY
-   (Clinical Management)         (Staff Broadcasts)               (Medical Catalog)
-         │                                 │                                 │
-   • Server Actions / REST         • Prisma 7 ORM                   • Mongoose ODM
-   • Nested Dynamic Routes         • PostgreSQL 16                  • MongoDB 7
-   • Client & Server Components    • ACID Transactions              • Embedded Sub-documents
-   • Local Data Store              • Relational 1:N User-Post       • Schema Constraints
+                                HEALTHGUARD PLATFORM
+                                         │
+        ┌────────────────────────────────┼────────────────────────────────┐
+        │                                │                                │
+  PATIENT RECORDS              STAFF ANNOUNCEMENTS              SUPPLY INVENTORY
+(Clinical Management)         (Relational / ACID)             (Document / Catalog)
+        │                                │                                │
+  Data: Local Store / REST       Data: PostgreSQL 16              Data: MongoDB 7
+  Engine: Server Actions         Engine: Prisma 7 ORM             Engine: Mongoose 9 ODM
+  Routes: /patients, /patients/[id] Route: /blog-db               Route: /supplies
+  Pattern: Dynamic Segments      Pattern: Interactive Tx          Pattern: Embedded Subdocs
 ```
+
+### Request and Data Flow
+1. **Client Interaction**: Client requests enter through Next.js 16 App Router pages.
+2. **Proxy / Middleware Layer (`proxy.ts`)**: Requests to protected routes (such as `/dashboard`) are evaluated against active session credentials managed by Better Auth.
+3. **Server Execution**:
+   - Patient mutations trigger Server Actions (`app/patients/actions.ts`), invoking file system utilities with automatic path revalidation (`revalidatePath`).
+   - Announcements trigger `createAuthorWithPostAction`, which executes an interactive ACID transaction via Prisma 7 across the User and Post tables in PostgreSQL.
+   - Medical inventory updates trigger Mongoose operations (`app/actions/supplyActions.ts`), utilizing a cached MongoDB connection to insert or update documents containing embedded inventory schemas.
 
 ---
 
-## 🛠️ Tech Stack & Database Topology
+## 3. Core Modules & Implementation Details
 
-| Component | Technology | Role & Implementation Details |
-| :--- | :--- | :--- |
-| **Framework** | Next.js 16.3 (Turbopack) | React 19 Server Components, Nested Layouts, Server Actions |
-| **Language** | TypeScript 5 | Strict static typing across schema models, props, and actions |
-| **Styling** | Tailwind CSS 4 | Clean, accessible, medical-grade responsive light UI |
-| **Relational DB** | PostgreSQL 16 (Alpine) | Structured relational data for staff accounts and announcements |
-| **Relational ORM** | Prisma 7.9+ & `@prisma/adapter-pg` | Programmatic config (`prisma.config.ts`), migrations, ACID transactions |
-| **Document DB** | MongoDB 7 | Flexible schema for medical catalog and stock replenishment |
-| **Document ODM** | Mongoose 9 | Embedded schemas, schema validation, persistent connection caching |
-| **Auth & Security** | Better Auth + Next.js Proxy | Session-based authentication, RBAC, edge-compatible proxy protection |
-| **Orchestration** | Docker & Docker Compose | Multi-container setup with internal DNS resolution & volume persistence |
+### 3.1 Clinical Patient Management (`/patients`)
+- **Routing Structure**:
+  - `/patients`: Directory listing supporting real-time search and clinical status filtering.
+  - `/patients/add`: Intake form for onboarding new patients.
+  - `/patients/[id]`: Dynamic route segment rendering individual medical history, vital signs (Blood Pressure, Heart Rate, Cholesterol), and edit capabilities.
+  - `app/patients/layout.tsx`: Nested layout providing dedicated sub-navigation across patient views.
+- **Data Handling**:
+  - Implements full CRUD operations (Create, Read, Update, Delete).
+  - Uses Server Actions with progressive enhancement, eliminating manual fetch boilerplate.
+  - Provides REST Route Handlers at `/api/patients` and `/api/patients/[id]` for external system interoperability.
 
----
-
-## 📂 Project Structure
-
-```
-healthguard-ai/
-├── app/
-│   ├── layout.tsx                # Root layout shell with Navbar and Sidebar
-│   ├── page.tsx                  # Landing portal
-│   ├── dashboard/page.tsx        # System metrics & clinical overview
-│   ├── patients/
-│   │   ├── layout.tsx            # Nested patient section layout
-│   │   ├── page.tsx              # Patient directory with live search & filters
-│   │   ├── add/page.tsx          # Patient intake form (Server Actions)
-│   │   ├── [id]/page.tsx         # Dynamic patient detail view & editor
-│   │   └── actions.ts            # Patient CRUD Server Actions
-│   ├── blog-db/                  # Staff Announcements (Prisma + PostgreSQL)
-│   │   └── page.tsx              # ACID transactional post creator and feed
-│   ├── supplies/                 # Medical Inventory (Mongoose + MongoDB)
-│   │   └── page.tsx              # Catalog management & stock updater
-│   ├── login/page.tsx            # Authentication portal (OAuth & credentials)
-│   ├── actions/
-│   │   ├── blogDbActions.ts      # prisma.$transaction mutations
-│   │   └── supplyActions.ts      # Mongoose CRUD & inventory atomic updates
-│   ├── api/
-│   │   ├── auth/[...all]/        # Better Auth route handler
-│   │   └── patients/             # Patient REST API route handlers
-│   ├── lib/
-│   │   ├── mongodb.ts            # Cached Mongoose connection singleton
-│   │   └── prisma.ts             # Cached PrismaClient with PostgreSQL adapter
-│   └── models/
-│       └── MedicalSupply.ts      # Mongoose schema with embedded InventorySchema
-├── components/
-│   ├── Navbar.tsx                # Navigation header with auth indicator
-│   ├── Sidebar.tsx               # Primary dashboard navigation
-│   └── AuthButton.tsx            # Dynamic session trigger / user profile
-├── lib/
-│   ├── auth.ts                   # Better Auth server configuration
-│   ├── auth-client.ts            # Client-side auth provider hook
-│   └── patients.ts               # Core patient business logic
-├── prisma/
-│   └── schema.prisma             # PostgreSQL data model (User, Session, Post)
-├── docker-compose.yml            # Multi-service stack (Next.js, Postgres, Mongo)
-├── Dockerfile                    # Multi-stage production container build
-├── next.config.ts                # Standalone output configuration
-├── proxy.ts                      # Next.js 16 edge proxy / route security
-└── package.json                  # Dependencies & execution scripts
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) v20.19.0+ or v22+
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for containerized DBs or full stack)
-- Git
-
----
-
-### Method A: Local Development Setup (Quickest)
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/bitbyrizbit/healthguard-ai.git
-   cd healthguard-ai
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root directory:
-   ```env
-   # PostgreSQL Connection (Docker container mapped to port 5433)
-   DATABASE_URL="postgresql://devuser:devpassword@localhost:5433/nextjs_blog_db?schema=public"
-
-   # MongoDB Connection
-   MONGODB_URI="mongodb://localhost:27017/healthguard_medical_supplies"
-
-   # Better Auth Settings
-   BETTER_AUTH_SECRET="your-super-secret-key-min-32-chars-long"
-   BETTER_AUTH_URL="http://localhost:3000"
-
-   # Optional Social OAuth
-   GITHUB_CLIENT_ID=""
-   GITHUB_CLIENT_SECRET=""
-   GOOGLE_CLIENT_ID=""
-   GOOGLE_CLIENT_SECRET=""
-   ```
-
-4. **Spin up PostgreSQL & MongoDB in background:**
-   ```bash
-   docker compose up postgres-db mongo-db -d
-   ```
-
-5. **Run Prisma Migrations:**
-   ```bash
-   npx prisma migrate dev --name init_schema
-   ```
-
-6. **Start the Next.js development server:**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-### Method B: Self-Hosted Production Stack via Docker Compose
-
-Run the entire ecosystem (Next.js Standalone + PostgreSQL 16 + MongoDB 7) with a single command:
-
-```bash
-docker compose up --build -d
-```
-
-- **HealthGuard Web Application**: `http://localhost:3000`
-- **PostgreSQL Port**: `localhost:5433` (internally mapped to `5432`)
-- **MongoDB Port**: `localhost:27017`
-
-To check container health and live logs:
-```bash
-docker compose ps
-docker compose logs -f next-app
-```
-
-To gracefully shut down:
-```bash
-docker compose down
-```
-
----
-
-## 🔬 Core Module Breakdown
-
-### 1. Clinical Patient Management (`/patients`)
-- Built using **Next.js App Router dynamic segments** (`/patients/[id]`) and nested layouts.
-- Complete clinical attributes: Name, Age, Gender, Contact Info, Blood Pressure, Cholesterol, Heart Rate, and Residential Address.
-- Supports dual mutation patterns: **Server Actions** for seamless progressive enhancement forms and **REST Route Handlers** (`/api/patients`) for API consumption.
-
-### 2. Hospital Announcements & Staff Communication (`/blog-db`)
-- Powered by **Prisma 7** using the `@prisma/adapter-pg` driver.
-- Demonstrates **ACID Transactions**:
+### 3.2 Staff Announcements & Broadcasts (`/blog-db`)
+- **Technology**: PostgreSQL 16, Prisma 7 ORM, `@prisma/adapter-pg` driver.
+- **Data Modeling**: Relational 1:N relationship between `User` (Author) and `Post` (Announcement).
+- **ACID Transaction Implementation**:
   ```typescript
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.upsert({
@@ -200,51 +64,237 @@ docker compose down
       update: { name },
       create: { name, email },
     });
+
     await tx.post.create({
-      data: { title, content, authorId: user.id },
+      data: {
+        title,
+        content,
+        authorId: user.id,
+      },
     });
   });
   ```
-- Guarantees strict transactional integrity: author creation and post publication either succeed together or rollback completely.
+  This interactive transaction guarantees that author upsert and post creation execute as an atomic unit. If either query fails, all operations roll back entirely, preventing orphaned records.
 
-### 3. Medical Supplies & Consumables Inventory (`/supplies`)
-- Powered by **MongoDB** and **Mongoose 9**.
-- Implements an embedded sub-document pattern (`InventorySchema` inside `MedicalSupplySchema`):
-  - SKU validation & automatic uppercase formatting.
-  - Non-negative stock count rules.
-  - Warehouse bin & shelf tracking.
-  - Enumerated categories (`PPE`, `Medication`, `Surgical`, `Diagnostics`, `Other`).
-- Connection caching singleton (`mongodb.ts`) ensures serverless functions and development reloads do not exhaust database connections.
+### 3.3 Medical Supplies Catalog & Inventory (`/supplies`)
+- **Technology**: MongoDB 7, Mongoose 9 ODM.
+- **Embedded Schema Architecture**:
+  - Primary document: `MedicalSupply` (Title, Slug, Price, Category, Tags, InStock status).
+  - Embedded sub-document: `Inventory` (SKU, Stock Count, Warehouse Location).
+- **Schema Validation Rules**:
+  - SKU validation: Mandatory, trimmed, uppercase enforcement.
+  - Stock validation: Non-negative numerical constraints (`min: [0, 'Stock cannot be negative']`).
+  - Enumeration: Category restricted to `['PPE', 'Medication', 'Surgical', 'Diagnostics', 'Other']`.
+- **Persistent Connection Cache (`app/lib/mongodb.ts`)**:
+  Next.js development and serverless environments frequently reload execution contexts. The connection utility caches the Mongoose connection promise globally (`global.mongooseCache`), preventing socket exhaustion.
 
-### 4. Edge Route Security (`proxy.ts`)
-- Next.js 16 compatible proxy layer (modern replacement for `middleware.ts`).
-- Intercepts requests to `/dashboard` and protected clinical views, verifying active session cookies and user roles.
+### 3.4 Authentication & Route Protection (`proxy.ts`, `lib/auth.ts`)
+- **Authentication Engine**: Better Auth configured with a Prisma PostgreSQL adapter.
+- **Access Control**: Role-based access control supporting guest and administrator privilege tiers.
+- **Next.js 16 Edge Proxy**: Implemented in `proxy.ts` (the Next.js 16 convention replacing legacy middleware). Evaluates session tokens before delegating requests to route handlers or views.
 
----
-
-## 🚢 Deployment Guide
-
-### Option 1: Docker on any VPS / Cloud Server (Recommended for Self-Hosting)
-1. Provision a VPS (AWS EC2, DigitalOcean Droplet, Hetzner, Linode).
-2. Install Docker and Docker Compose on the host.
-3. Clone this repository and populate `.env`.
-4. Run:
-   ```bash
-   docker compose up --build -d
-   ```
-5. Put Nginx, Caddy, or Cloudflare Tunnel in front of port `3000` for SSL termination.
-
-### Option 2: Managed Cloud (Vercel + Hosted DBs)
-1. **Database Provisioning**:
-   - Create a free PostgreSQL database on [Neon](https://neon.tech) or [Supabase](https://supabase.com).
-   - Create a free MongoDB database on [MongoDB Atlas](https://www.mongodb.com/atlas).
-2. **Environment Variables**:
-   - In your Vercel project settings, add `DATABASE_URL` (pointing to Neon) and `MONGODB_URI` (pointing to Atlas).
-   - Add `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (set to your Vercel domain).
-3. **Deploy**:
-   - Connect your GitHub repository to Vercel and trigger the build. Prisma generate and the Next.js build run automatically on deploy.
+### 3.5 Docker Multi-Stage Containerization
+- **Output Mode**: Configured with `output: "standalone"` in `next.config.ts`.
+- **Build Stages**:
+  1. `deps`: Installs production dependencies using `npm ci` on Node 20 Alpine.
+  2. `builder`: Generates Prisma clients, compiles TypeScript, and runs Next.js standalone build.
+  3. `runner`: Minimal Alpine Linux image containing only standalone artifacts and static assets. Runs under an unprivileged `nextjs` system user for container security.
+- **Compose Orchestration (`docker-compose.yml`)**:
+  Defines three interconnected services: `next-app`, `postgres-db`, and `mongo-db`, using Docker internal network DNS (`postgres-db:5432`, `mongo-db:27017`) with named persistent storage volumes.
 
 ---
 
-## 📄 License
-This project is open-source and available under the [MIT License](LICENSE).
+## 4. Technology Stack
+
+| Layer | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| Application Framework | Next.js (App Router) | 16.3.1 | Core application server, routing, server actions |
+| Language | TypeScript | 5.x | Static typing, interface definitions |
+| UI Styling | Tailwind CSS | 4.x | Responsive styling, component layouts |
+| Relational Database | PostgreSQL | 16-alpine | User accounts, sessions, internal announcements |
+| Relational ORM | Prisma | 7.9+ | Migrations, query construction, ACID transactions |
+| Relational Driver | pg + @prisma/adapter-pg | 8.x / 7.x | Connection pooling and native driver adapter |
+| Document Database | MongoDB | 7.x | Medical supplies and inventory catalog |
+| Document ODM | Mongoose | 9.x | Schema modeling, validation, embedded sub-documents |
+| Authentication | Better Auth | 1.7.x | Session management, OAuth, user schema |
+| Containerization | Docker & Docker Compose | Engine 24+ | Multi-stage image build, service orchestration |
+
+---
+
+## 5. Repository Directory Structure
+
+```
+healthguard-ai/
+├── app/
+│   ├── layout.tsx                  # Root layout shell with navigation
+│   ├── page.tsx                    # Application home page
+│   ├── dashboard/page.tsx          # System analytics and overview
+│   ├── patients/                   # Patient records module
+│   │   ├── layout.tsx              # Nested patient navigation layout
+│   │   ├── page.tsx                # Patient directory with filtering
+│   │   ├── add/page.tsx            # Patient registration form
+│   │   ├── [id]/page.tsx           # Dynamic individual record view
+│   │   └── actions.ts              # Server Actions for patient mutations
+│   ├── blog-db/                    # Staff announcements module (Prisma + Postgres)
+│   │   └── page.tsx                # Announcement list and publication form
+│   ├── supplies/                   # Medical supplies module (Mongoose + MongoDB)
+│   │   └── page.tsx                # Catalog view and stock submission form
+│   ├── login/page.tsx              # Authentication entry point
+│   ├── actions/
+│   │   ├── blogDbActions.ts        # ACID transactional mutations for announcements
+│   │   └── supplyActions.ts        # Mongoose server actions for inventory
+│   ├── api/
+│   │   ├── auth/[...all]/          # Better Auth API route handler
+│   │   └── patients/               # Patient REST API route handlers
+│   │       ├── route.ts            # GET (list) and POST (create)
+│   │       └── [id]/route.ts       # GET, PUT, DELETE by patient ID
+│   ├── lib/
+│   │   ├── mongodb.ts              # Global cached Mongoose connection
+│   │   └── prisma.ts               # PrismaClient instance with PostgreSQL adapter
+│   └── models/
+│       └── MedicalSupply.ts        # Mongoose schema with embedded InventorySchema
+├── components/
+│   ├── Navbar.tsx                  # Header navigation bar
+│   ├── Sidebar.tsx                 # Main application sidebar navigation
+│   └── AuthButton.tsx              # User authentication status indicator
+├── lib/
+│   ├── auth.ts                     # Better Auth configuration
+│   ├── auth-client.ts              # Client-side authentication helpers
+│   └── patients.ts                 # Patient business logic and data access
+├── prisma/
+│   ├── schema.prisma               # Prisma schema defining User, Session, Post
+│   └── migrations/                 # PostgreSQL database migrations
+├── docker-compose.yml              # Multi-container orchestration definition
+├── Dockerfile                      # Three-stage production Docker build
+├── next.config.ts                  # Next.js configuration with standalone output
+├── prisma.config.ts                # Prisma 7 programmatic configuration
+├── proxy.ts                        # Next.js 16 edge proxy / route security
+├── package.json                    # Project metadata, scripts, and dependencies
+└── tsconfig.json                   # TypeScript compiler configuration
+```
+
+---
+
+## 6. Database Schemas
+
+### 6.1 PostgreSQL Relational Model (`prisma/schema.prisma`)
+```prisma
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  role          String    @default("guest")
+  posts         Post[]
+  sessions      Session[]
+  accounts      Account[]
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  published Boolean  @default(true)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+### 6.2 MongoDB Document Model (`app/models/MedicalSupply.ts`)
+```typescript
+interface IInventory {
+  sku: string;
+  stock: number;
+  warehouseLocation: string;
+}
+
+interface IMedicalSupply extends Document {
+  title: string;
+  slug: string;
+  price: number;
+  category: 'PPE' | 'Medication' | 'Surgical' | 'Diagnostics' | 'Other';
+  tags: string[];
+  inventory: IInventory;
+  inStock: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+## 7. REST API Endpoints
+
+| Method | Endpoint | Description | Payload / Parameters |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/patients` | Retrieve list of all patient records | None |
+| `POST` | `/api/patients` | Create a new patient record | JSON Patient object |
+| `GET` | `/api/patients/:id` | Fetch details of a specific patient | URL parameter `id` |
+| `PUT` | `/api/patients/:id` | Update patient record | JSON partial Patient object |
+| `DELETE` | `/api/patients/:id` | Remove patient record | URL parameter `id` |
+| `ALL` | `/api/auth/*` | Better Auth session and OAuth routes | Managed by auth client |
+
+---
+
+## 8. Local Setup & Execution Guide
+
+### Prerequisites
+- Node.js v20.19.0+ or v22+
+- Docker Desktop
+- npm v10+
+
+### Step 1: Clone Repository & Install Dependencies
+```bash
+git clone https://github.com/bitbyrizbit/healthguard-ai.git
+cd healthguard-ai
+npm install
+```
+
+### Step 2: Configure Environment Variables
+Create a `.env` file in the project root:
+```env
+# PostgreSQL connection (port 5433 when mapped through local docker-compose)
+DATABASE_URL="postgresql://devuser:devpassword@localhost:5433/nextjs_blog_db?schema=public"
+
+# MongoDB connection
+MONGODB_URI="mongodb://localhost:27017/healthguard_medical_supplies"
+
+# Authentication
+BETTER_AUTH_SECRET="your-32-character-secret-key-here"
+BETTER_AUTH_URL="http://localhost:3000"
+```
+
+### Step 3: Run with Docker Compose
+To start the entire environment (Application + PostgreSQL + MongoDB):
+```bash
+docker compose up --build -d
+```
+
+The application will be accessible at: `http://localhost:3000`
+
+### Step 4: Standalone Development Mode
+To run database containers in the background while running the Next.js dev server on the host:
+```bash
+# Start only database containers
+docker compose up postgres-db mongo-db -d
+
+# Apply Prisma migrations
+npx prisma migrate dev --name init_schema
+
+# Start Next.js development server
+npm run dev
+```
+
+---
+
+## 9. Verification & Testing Checklist
+
+- **Patient Management**: Navigate to `/patients` to verify listing, addition via `/patients/add`, and individual record updates at `/patients/[id]`.
+- **Relational Integrity**: Navigate to `/blog-db` and submit an announcement to verify author upsert and post linking via PostgreSQL transaction.
+- **Document Store**: Navigate to `/supplies` and submit an item to verify embedded inventory sub-document insertion in MongoDB.
+- **Container Health**: Execute `docker ps` to verify `healthguard_next_app`, `nextjs_postgres_db`, and `nextjs_mongo_db` containers are running.
