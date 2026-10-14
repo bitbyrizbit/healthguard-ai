@@ -33,9 +33,9 @@ export default async function proxy(request: NextRequest) {
       }
     }
 
-    // Check if the user is authenticated
+    // Check if the user is authenticated for protected routes (e.g., admin portal)
     if (!user) {
-      if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin")) {
+      if (pathname.startsWith("/admin")) {
         return NextResponse.redirect(new URL("/login", request.url));
       }
       return NextResponse.next();
@@ -49,16 +49,10 @@ export default async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
-    if (pathname.startsWith("/dashboard") && role === "guest") {
-      // Guests cannot access the dashboard
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-
     return NextResponse.next();
   } catch (error) {
     console.error("Middleware Auth Error:", error);
-    // On failure, fallback to redirecting restricted routes
-    if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin")) {
+    if (pathname.startsWith("/admin")) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
