@@ -24,6 +24,10 @@ export default function Sidebar() {
       <Link href="/supplies" className={`px-4 py-2 rounded-md ${isActive("/supplies")}`}>
         Inventory
       </Link>
+      <Link href="/admin" className={`px-4 py-2 rounded-md flex items-center justify-between ${isActive("/admin")}`}>
+        <span>Admin Panel</span>
+        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">RBAC</span>
+      </Link>
       <Link href="/about" className={`px-4 py-2 rounded-md ${isActive("/about")}`}>
         About
       </Link>
