@@ -15,9 +15,8 @@ export default async function proxy(request: NextRequest) {
   }
 
   try {
-    // Fetch session from Better Auth API
-    // We do this via fetch because Edge runtime cannot use the Node.js pg driver in auth.ts
-    const sessionRes = await fetch(`${request.nextUrl.origin}/api/auth/get-session`, {
+    const localOrigin = `http://127.0.0.1:${process.env.PORT || 3000}`;
+    const sessionRes = await fetch(`${localOrigin}/api/auth/get-session`, {
       headers: {
         cookie: request.headers.get("cookie") || "",
       },
