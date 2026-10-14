@@ -33,6 +33,12 @@ services:
       # Use internal Docker network hostnames (postgres-db, mongo-db) instead of localhost
       - DATABASE_URL=postgresql://devuser:devpassword@postgres-db:5432/nextjs_blog_db?schema=public
       - MONGODB_URI=mongodb://mongo-db:27017/healthguard_medical_supplies
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-Ov23liU725fUEUqHJIdO}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-b4449959865e8db6cfa46f7458af30e97e12d5be}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-175037203972-ghe8c5qng2bvn6vds2q8o9a3d3fvlpni.apps.googleusercontent.com}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-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}
     depends_on:
       - postgres-db
       - mongo-db

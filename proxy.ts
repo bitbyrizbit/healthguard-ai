@@ -23,8 +23,15 @@ export default async function proxy(request: NextRequest) {
       },
     });
 
-    const sessionData = await sessionRes.json();
-    const user = sessionData?.user;
+    let user = null;
+    if (sessionRes.ok) {
+      try {
+        const sessionData = await sessionRes.json();
+        user = sessionData?.user;
+      } catch (err) {
+        user = null;
+      }
+    }
 
     // Check if the user is authenticated
     if (!user) {
